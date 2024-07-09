@@ -240,6 +240,8 @@ namespace E3Core.Settings
 
 		[INI_Section("Gimme", "Gimme")]
 		public List<string> Gimme = new List<string>();
+		[INI_Section("Gimme", "Gimme-NoCombat")]
+		public List<string> Gimme_NoCombat = new List<string>();
 		[INI_Section("Gimme", "Gimme-InCombat")]
 		public bool Gimme_InCombat = true;
 
@@ -430,7 +432,7 @@ namespace E3Core.Settings
 
 		//charm data
 		[INI_Section("Charm", "CharmSpell")]
-		public Spell Charm_CharmSpell = null;
+		public List<Spell> Charm_CharmSpells = new List<Spell>();
 		[INI_Section("Charm", "CharmOhShitSpells")]
 		public List<Spell> Charm_CharmOhShitSpells = new List<Spell>();
 		[INI_Section("Charm", "SelfDebuffSpells")]
@@ -952,16 +954,11 @@ namespace E3Core.Settings
             LoadKeyData("Heals", "Auto Cast Necro Heal Orbs (On/Off)", ParsedData, ref HealAutoNecroOrbs);
             LoadKeyData("Off Assist Spells", "Main", ParsedData, OffAssistSpells);
             LoadKeyData("Gimme", "Gimme", ParsedData, Gimme);
-            LoadKeyData("Gimme", "Gimme-InCombat", ParsedData, ref Gimme_InCombat);
+			LoadKeyData("Gimme", "Gimme-NoCombat", ParsedData, Gimme_NoCombat);
+			LoadKeyData("Gimme", "Gimme-InCombat", ParsedData, ref Gimme_InCombat);
 
-            List<Spell> tcharmSpells = new List<Spell>();
-
-            LoadKeyData("Charm", "CharmSpell",ParsedData, tcharmSpells);
-            foreach(Spell spell in tcharmSpells)
-            {
-                Charm_CharmSpell = spell;
-                break;
-            }
+            LoadKeyData("Charm", "CharmSpell",ParsedData, Charm_CharmSpells);
+         
 			LoadKeyData("Charm", "CharmOhShitSpells", ParsedData, Charm_CharmOhShitSpells);
 			LoadKeyData("Charm", "SelfDebuffSpells", ParsedData, Charm_SelfDebuffSpells);
 			LoadKeyData("Charm", "BadPetBuffs", ParsedData, Charm_BadPetBuffs);
@@ -1296,7 +1293,7 @@ namespace E3Core.Settings
 			section = newFile.Sections.GetSectionData("Gimme");
 			section.Keys.AddKey("Gimme-InCombat", "On");
 			section.Keys.AddKey("Gimme", "");
-
+			section.Keys.AddKey("Gimme-NoCombat", "");
 
 			//newFile.Sections.AddSection("LootCommander");
 			//section = newFile.Sections.GetSectionData("LootCommander");

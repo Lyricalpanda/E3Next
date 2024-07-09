@@ -34,6 +34,20 @@ namespace E3Core.Utility
 		//share this as we can reuse as its only 1 thread
 		private static StringBuilder _resultStringBuilder = new StringBuilder(1024);
 		//modified from https://stackoverflow.com/questions/6275980/string-replace-ignoring-case
+
+
+		
+		public static Int32 Latency()
+		{
+			Int32 returnValue = 0;
+			Int32 result = MQ.Query<Int32>("${EverQuest.Ping}");
+			if(result>0)
+			{
+				returnValue = result;
+			}
+			return returnValue;
+		}
+		
 		public static string ArgsToCommand(List<String> args)
 		{
 			_resultStringBuilder.Clear();
@@ -846,6 +860,11 @@ namespace E3Core.Utility
         }
         public static string GetLocalIPAddress()
         {
+            if (!string.IsNullOrWhiteSpace(E3.GeneralSettings.General_Networking_LocalIPOverride))
+            {
+                return E3.GeneralSettings.General_Networking_LocalIPOverride;
+            }
+
 			//https://stackoverflow.com/questions/6803073/get-local-ip-address
 
 			string localIP;
