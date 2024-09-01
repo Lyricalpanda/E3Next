@@ -1,16 +1,11 @@
-﻿using E3Core.Processors;
-using E3Core.Utility;
+﻿using E3Core.Utility;
 using IniParser;
 using IniParser.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Runtime.CompilerServices;
-using System.Runtime.Serialization.Formatters;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Collections.Specialized.BitVector32;
+
 
 namespace E3Core.Settings
 {
@@ -25,7 +20,7 @@ namespace E3Core.Settings
         public Int32 General_AutoMedBreakPctMana;
         public bool AutoMisfitBox;
         public bool AttackOffOnEnrage;
-        public bool RelayTells;
+        public bool RelayTells=true;
         public string General_NetworkMethod = "EQBC";
         public DefaultBroadcast General_BroadCast_Default = DefaultBroadcast.Group;
         public bool General_HealWhileNavigating = true;
@@ -331,6 +326,7 @@ namespace E3Core.Settings
             section.Keys.AddKey("E3NetworkAddPathToMonitor", "");
         	section.Keys.AddKey("LazarusManaRecovery (On/Off)", "On");
 			section.Keys.AddKey("ExternalIP To Query For Local Address (8.8.8.8 default)", "8.8.8.8");
+			section.Keys.AddKey("Local IP Override", "");
 
 			section.Keys.AddKey("Heal While Navigating (On/Off)","On");
             section.Keys.AddKey("Cure While Navigating (On/Off)", "On");

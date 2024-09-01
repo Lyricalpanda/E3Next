@@ -67,6 +67,90 @@ namespace E3NextConfigEditor.Models
 			get { return _spell.RecastTime; }
 
 		}
+		[Category("Spell Slot Data")]
+		[Description("Slot01")]
+		public string Slot01
+		{
+			get { return _spell.SpellEffects.Count > 0 ? _spell.SpellEffects[0] : String.Empty;}
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot02")]
+		public string Slot02
+		{
+			get { return _spell.SpellEffects.Count > 1 ? _spell.SpellEffects[1] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot03")]
+		public string Slot03
+		{
+			get { return _spell.SpellEffects.Count > 2 ? _spell.SpellEffects[2] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot04")]
+		public string Slot04
+		{
+			get { return _spell.SpellEffects.Count > 3 ? _spell.SpellEffects[3] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot05")]
+		public string Slot05
+		{
+			get { return _spell.SpellEffects.Count > 4 ? _spell.SpellEffects[4] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot06")]
+		public string Slot06
+		{
+			get { return _spell.SpellEffects.Count > 5 ? _spell.SpellEffects[5] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot07")]
+		public string Slot07
+		{
+			get { return _spell.SpellEffects.Count > 6 ? _spell.SpellEffects[6] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot08")]
+		public string Slot08
+		{
+			get { return _spell.SpellEffects.Count > 7 ? _spell.SpellEffects[7] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot09")]
+		public string Slot09
+		{
+			get { return _spell.SpellEffects.Count > 8 ? _spell.SpellEffects[8] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot10")]
+		public string Slot10
+		{
+			get { return _spell.SpellEffects.Count > 9 ? _spell.SpellEffects[9] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot11")]
+		public string Slot11
+		{
+			get { return _spell.SpellEffects.Count > 10 ? _spell.SpellEffects[10] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot12")]
+		public string Slot12
+		{
+			get { return _spell.SpellEffects.Count > 11 ? _spell.SpellEffects[11] : String.Empty; }
+
+		}
 		[Category("Flags")]
 		[Description("PctAggro you have to be at before this ability will fire")]
 		public Int32 PctAggro
@@ -187,6 +271,50 @@ namespace E3NextConfigEditor.Models
 			set { _spell.BeforeEventKeys = value; }
 		}
 		[Category("Flags")]
+		[Description("After Event Delay in milliseconds")]
+		public Int32 AfterEventDelay
+		{
+			get { return _spell.AfterEventDelay; }
+			set { _spell.AfterEventDelay = value; }
+		}
+		[Category("Flags")]
+		[Description("After Spell Delay in milliseconds")]
+		public Int32 AfterSpellDelay
+		{
+			get { return _spell.AfterSpellDelay; }
+			set { _spell.AfterSpellDelay = value; }
+		}
+		
+		[Category("Flags")]
+		[Description("Before Event Delay in milliseconds")]
+		public Int32 BeforeEventDelay
+		{
+			get { return _spell.BeforeEventDelay; }
+			set { _spell.BeforeEventDelay = value; }
+		}
+		[Category("Flags")]
+		[Description("Before Spell Delay in milliseconds")]
+		public Int32 BeforeSpellDelay
+		{
+			get { return _spell.BeforeSpellDelay; }
+			set { _spell.BeforeSpellDelay = value; }
+		}
+		[Category("Flags")]
+		[Description("After Spell Delay in milliseconds. This is after cast and before the spell window closes.")]
+		public Int32 AfterCastDelay
+		{
+			get { return _spell.AfterCastDelay; }
+			set { _spell.AfterCastDelay = value; }
+		}
+		[Category("Flags")]
+		[Description("After Spell Delay in milliseconds. This is after cast and after the spell window closes.")]
+		public Int32 AfterCastCompletedDelay
+		{
+			get { return _spell.AfterCastCompletedDelay; }
+			set { _spell.AfterCastCompletedDelay = value; }
+		}
+	
+		[Category("Flags")]
 		[Description("Give a no target hint to E3N to not swap targets to use the spell.")]
 		public bool NoTarget
 		{
@@ -255,6 +383,13 @@ namespace E3NextConfigEditor.Models
 		{
 			get { return _spell.MaxMana; }
 			set { _spell.MaxMana = value; }
+		}
+		[Category("Flags")]
+		[Description("Song min time left before recasting song, in seconds")]
+		public Int32 SongRefreshTime
+		{
+			get { return _spell.SongRefreshTime; }
+			set { _spell.SongRefreshTime = value; }
 		}
 		[Category("Flags")]
 		[Description("Min endurance before you try and cast an ability")]
@@ -357,6 +492,90 @@ namespace E3NextConfigEditor.Models
 			get { return _spell.RecastTime; }
 
 		}
+		[Category("Spell Slot Data")]
+		[Description("Slot01")]
+		public string Slot01
+		{
+			get { return _spell.SpellEffects.Count > 0 ? _spell.SpellEffects[0] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot02")]
+		public string Slot02
+		{
+			get { return _spell.SpellEffects.Count > 1 ? _spell.SpellEffects[1] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot03")]
+		public string Slot03
+		{
+			get { return _spell.SpellEffects.Count > 2 ? _spell.SpellEffects[2] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot04")]
+		public string Slot04
+		{
+			get { return _spell.SpellEffects.Count > 3 ? _spell.SpellEffects[3] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot05")]
+		public string Slot05
+		{
+			get { return _spell.SpellEffects.Count > 4 ? _spell.SpellEffects[4] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot06")]
+		public string Slot06
+		{
+			get { return _spell.SpellEffects.Count > 5 ? _spell.SpellEffects[5] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot07")]
+		public string Slot07
+		{
+			get { return _spell.SpellEffects.Count > 6 ? _spell.SpellEffects[6] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot08")]
+		public string Slot08
+		{
+			get { return _spell.SpellEffects.Count > 7 ? _spell.SpellEffects[7] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot09")]
+		public string Slot09
+		{
+			get { return _spell.SpellEffects.Count > 8 ? _spell.SpellEffects[8] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot10")]
+		public string Slot10
+		{
+			get { return _spell.SpellEffects.Count > 9 ? _spell.SpellEffects[9] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot11")]
+		public string Slot11
+		{
+			get { return _spell.SpellEffects.Count > 10 ? _spell.SpellEffects[10] : String.Empty; }
+
+		}
+		[Category("Spell Slot Data")]
+		[Description("Slot12")]
+		public string Slot12
+		{
+			get { return _spell.SpellEffects.Count > 11 ? _spell.SpellEffects[11] : String.Empty; }
+
+		}
 		[Category("Flags")]
 		[Description("Prevent this from being interrupted")]
 		public bool NoInterrupt
@@ -436,11 +655,61 @@ namespace E3NextConfigEditor.Models
 			set { _spell.BeforeSpell = value; }
 		}
 		[Category("Flags")]
+		[Description("Song min time left before recasting song, in seconds")]
+		public Int32 SongRefreshTime
+		{
+			get { return _spell.SongRefreshTime; }
+			set { _spell.SongRefreshTime = value; }
+		}
+		[Category("Flags")]
 		[Description("After Event Name, follows normal heircy rules")]
 		public string AfterEvent
 		{
 			get { return _spell.AfterEventKeys; }
 			set { _spell.AfterEventKeys = value; }
+		}
+		[Category("Flags")]
+		[Description("After Event Delay in milliseconds")]
+		public Int32 AfterEventDelay
+		{
+			get { return _spell.AfterEventDelay; }
+			set { _spell.AfterEventDelay = value; }
+		}
+		[Category("Flags")]
+		[Description("After Spell Delay in milliseconds")]
+		public Int32 AfterSpellDelay
+		{
+			get { return _spell.AfterSpellDelay; }
+			set { _spell.AfterSpellDelay = value; }
+		}
+
+		[Category("Flags")]
+		[Description("Before Event Delay in milliseconds")]
+		public Int32 BeforeEventDelay
+		{
+			get { return _spell.BeforeEventDelay; }
+			set { _spell.BeforeEventDelay = value; }
+		}
+		[Category("Flags")]
+		[Description("Before Spell Delay in milliseconds")]
+		public Int32 BeforeSpellDelay
+		{
+			get { return _spell.BeforeSpellDelay; }
+			set { _spell.BeforeSpellDelay = value; }
+		}
+		[Category("Flags")]
+		[Description("After Spell Delay in milliseconds. This is after cast and before the spell window closes.")]
+		public Int32 AfterCastDelay
+		{
+			get { return _spell.AfterCastDelay; }
+			set { _spell.AfterCastDelay = value; }
+		}
+		[Category("Flags")]
+		[Description("After Spell Delay in milliseconds. This is after cast and after the spell window closes.")]
+		public Int32 AfterCastCompletedDelay
+		{
+			get { return _spell.AfterCastCompletedDelay; }
+			set { _spell.AfterCastCompletedDelay = value; }
 		}
 		[Category("Flags")]
 		[Description("Before Event Name, follows normal heircy rules")]

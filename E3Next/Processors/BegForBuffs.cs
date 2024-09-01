@@ -35,7 +35,7 @@ namespace E3Core.Processors
         private static SpellAliasDataFile _spellAliasesDataFile = new SpellAliasDataFile();
         public static Dictionary<string, string> SpellAliases;
         [SubSystemInit]
-        public static void Init()
+        public static void BegForBuffs_Init()
         {
             RegsterEvents();
             _spellAliasesDataFile.LoadData();
@@ -418,7 +418,7 @@ namespace E3Core.Processors
                 spell = realSpell;
             }
            
-            if(!String.IsNullOrWhiteSpace(user))
+            if(!String.IsNullOrWhiteSpace(user) && user!=E3.CurrentName)
             {
                 MQ.Cmd($"/t {user} I'm queuing up {spell} to use on you, please wait.");
                
@@ -482,8 +482,9 @@ namespace E3Core.Processors
                     {
                         //so we can be sure our cursor was empty before we cast
                         Int32 cursorID = MQ.Query<Int32>("${Cursor.ID}");
-
+						Casting.TrueTarget(spawn.ID);
 					recast:
+
 						var result = Casting.Cast(spawn.ID, s, Heals.SomeoneNeedsHealing);
 						if (result == CastReturn.CAST_FIZZLE) goto recast;
 

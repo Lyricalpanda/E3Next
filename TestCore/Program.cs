@@ -228,6 +228,21 @@ namespace TestCore
 			{
                 return "NULL";
 			}
+
+			public void WriteDelayed(string query, [CallerMemberName] string memberName = "", [CallerFilePath] string fileName = "", [CallerLineNumber] int lineNumber = 0)
+			{
+				Console.WriteLine($"[{System.DateTime.Now.ToString("HH:mm:ss")}] {query}");
+			}
+
+			public string SpellDataGetLine(string query, int line)
+			{
+				return "NULL";
+			}
+
+			public int SpellDataGetLineCount(string query)
+			{
+				return -1;
+			}
 		}
 
     }

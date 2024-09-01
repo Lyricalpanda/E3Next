@@ -4,7 +4,6 @@ using IniParser.Model;
 using MonoCore;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -13,7 +12,7 @@ namespace E3Core.Data
 {
 
 
-    public enum CastingType
+	public enum CastingType
     {
         AA,
         Spell,
@@ -28,6 +27,13 @@ namespace E3Core.Data
         public static Dictionary<Int32, Data.Spell> _loadedSpells = new Dictionary<int, Spell>();
         public static Dictionary<string, Data.Spell> LoadedSpellsByName = new Dictionary<string, Spell>();
         public static Dictionary<string, Data.Spell> LoadedSpellByConfigEntry = new Dictionary<string, Data.Spell>();
+
+		//these can be set to use these lookup spells, mainly used for the config editor so that we don't have to query MQ in a chatty fashion
+		public static Dictionary<string, SpellData> SpellDataLookup = new Dictionary<string, SpellData>(StringComparer.OrdinalIgnoreCase);
+		public static Dictionary<string, SpellData> AltDataLookup = new Dictionary<string, SpellData>(StringComparer.OrdinalIgnoreCase);
+		public static Dictionary<string, SpellData> DiscDataLookup = new Dictionary<string, SpellData>(StringComparer.OrdinalIgnoreCase);
+		public static Dictionary<string, SpellData> ItemDataLookup = new Dictionary<string, SpellData>(StringComparer.OrdinalIgnoreCase);
+
 		static Dictionary<string, Int32> _spellIDLookup = new Dictionary<string, Int32>();
 		public static IMQ MQ = E3.MQ;
         //mainly to deal with temp items that you might not have but specified in your ini
@@ -130,6 +136,14 @@ namespace E3Core.Data
 					{
 						IgnoreStackRules = true;
 					}
+					else if (value.Equals("IgnoreStackRules", StringComparison.OrdinalIgnoreCase))
+					{
+						IgnoreStackRules = true;
+					}
+					else if (value.StartsWith("SongRefreshTime|", StringComparison.OrdinalIgnoreCase))
+					{
+						SongRefreshTime = GetArgument<Int32>(value);
+					}
 					else if (value.StartsWith("HealthMax|", StringComparison.OrdinalIgnoreCase))
 					{
 						HealthMax = GetArgument<Int32>(value);
@@ -148,6 +162,10 @@ namespace E3Core.Data
                         }
 						//StackIntervalCheck
 					}
+					else if (value.StartsWith("BeforeCast|", StringComparison.OrdinalIgnoreCase))
+                    {
+                        BeforeSpell = GetArgument<String>(value);
+                    }
 					else if (value.StartsWith("StackCheckInterval|", StringComparison.OrdinalIgnoreCase))
 					{
 						StackIntervalCheck = GetArgument<Int64>(value);
@@ -217,6 +235,7 @@ namespace E3Core.Data
                     }
 					else if (value.StartsWith("MinHPTotal|", StringComparison.OrdinalIgnoreCase))
 					{
+						//mainly for shaman canni AA, should probably put it for all spell checks
 						MinHPTotal = GetArgument<Int32>(value);
 					}
 					else if (value.StartsWith("HealPct|", StringComparison.OrdinalIgnoreCase))
@@ -275,8 +294,14 @@ namespace E3Core.Data
 					else if (value.StartsWith("DelayAfterCast|", StringComparison.OrdinalIgnoreCase))
 					{
 						
-						DelayAfterCast = GetArgument<Int32>(value);
+						AfterCastCompletedDelay = GetArgument<Int32>(value);
 						
+					}
+					else if (value.StartsWith("AfterCastCompletedDelay|", StringComparison.OrdinalIgnoreCase))
+					{
+
+						AfterCastCompletedDelay = GetArgument<Int32>(value);
+
 					}
 					else if (value.Equals("GoM", StringComparison.OrdinalIgnoreCase))
                     {
@@ -294,7 +319,27 @@ namespace E3Core.Data
                     {
                         MinSick = GetArgument<Int32>(value);
                     }
-                    else if (value.StartsWith("MinEnd|", StringComparison.OrdinalIgnoreCase))
+					else if (value.StartsWith("AfterEventDelay|", StringComparison.OrdinalIgnoreCase))
+					{
+						AfterEventDelay = GetArgument<Int32>(value);
+					}
+					else if (value.StartsWith("BeforeEventDelay|", StringComparison.OrdinalIgnoreCase))
+					{
+						BeforeEventDelay = GetArgument<Int32>(value);
+					}
+					else if (value.StartsWith("AfterSpellDelay|", StringComparison.OrdinalIgnoreCase))
+					{
+						AfterSpellDelay = GetArgument<Int32>(value);
+					}
+					else if (value.StartsWith("BeforeSpellDelay|", StringComparison.OrdinalIgnoreCase))
+					{
+						BeforeSpellDelay = GetArgument<Int32>(value);
+					}
+					else if (value.StartsWith("AfterCastDelay|", StringComparison.OrdinalIgnoreCase))
+					{
+						AfterCastDelay = GetArgument<Int32>(value);
+					}
+					else if (value.StartsWith("MinEnd|", StringComparison.OrdinalIgnoreCase))
                     {
                         MinEnd = GetArgument<Int32>(value);
                     }
@@ -328,6 +373,14 @@ namespace E3Core.Data
                                 {
                                     Ifs = string.IsNullOrWhiteSpace(Ifs) ? keyData : Ifs + " && " + keyData;
                                 }
+								else
+								{
+									//check the global ifs
+									if(E3.GlobalIfs.Ifs.ContainsKey(key))
+									{
+										Ifs = string.IsNullOrWhiteSpace(Ifs) ? E3.GlobalIfs.Ifs[key] : Ifs + " && " + E3.GlobalIfs.Ifs[key];
+									}
+								}
                             }
                         }
                     }
@@ -500,7 +553,17 @@ namespace E3Core.Data
                 Int32 bagSlot;
                 //check if this is an itemID
 
+				//we already have this data populated, just kick out
+				if(ItemDataLookup.ContainsKey(CastName))
+				{
+					var SpellData = ItemDataLookup[CastName];
+					Spell.TransferSpellData(SpellData, this);
+					goto gotoCheckCollectionPopulation;
+				}
+				
                 Int32 itemID = -1;
+
+
 
                 bool itemFound = MQ.Query<bool>($"${{FindItem[{CastName}]}}");
 
@@ -598,7 +661,15 @@ namespace E3Core.Data
             }
             else if (CastType == CastingType.AA)
             {
-                TargetType = MQ.Query<String>($"${{Me.AltAbility[{CastName}].Spell.TargetType}}");
+				//we already have this data populated, just kick out
+				if (AltDataLookup.ContainsKey(CastName))
+				{
+					var SpellData = AltDataLookup[CastName];
+					Spell.TransferSpellData(SpellData, this);
+
+					goto gotoCheckCollectionPopulation;
+				}
+				TargetType = MQ.Query<String>($"${{Me.AltAbility[{CastName}].Spell.TargetType}}");
                 Duration = MQ.Query<Int32>($"${{Me.AltAbility[{CastName}].Spell.Duration}}");
                 DurationTotalSeconds = MQ.Query<Int32>($"${{Me.AltAbility[{CastName}].Spell.Duration.TotalSeconds}}");
 
@@ -613,6 +684,7 @@ namespace E3Core.Data
                 Description = MQ.Query<String>($"${{Spell[{CastName}].Description}}");
 				ResistType = MQ.Query<String>($"${{Me.AltAbility[{CastName}].Spell.ResistType}}");
 				ResistAdj = MQ.Query<Int32>($"${{Me.AltAbility[{CastName}].Spell.ResistAdj}}");
+				AAID = MQ.Query<Int32>($"${{Me.AltAbility[{CastName}].ID}}");
 
 				if (SpellType.Equals("Detrimental", StringComparison.OrdinalIgnoreCase))
                 {
@@ -651,10 +723,17 @@ namespace E3Core.Data
 			}
 			else if (CastType == CastingType.Spell)
             {
-              
-                if(SpellInBook)
+				
+				if (SpellInBook)
                 {
-                    string bookNumber = MQ.Query<string>($"${{Me.Book[{CastName}]}}");
+					//we already have this data populated, just kick out
+					if (SpellDataLookup.ContainsKey(CastName))
+					{
+						var SpellData = SpellDataLookup[CastName];
+						Spell.TransferSpellData(SpellData, this);
+						goto gotoCheckCollectionPopulation;
+					}
+					string bookNumber = MQ.Query<string>($"${{Me.Book[{CastName}]}}");
 
                     TargetType = MQ.Query<String>($"${{Me.Book[{bookNumber}].TargetType}}");
                     Duration = MQ.Query<Int32>($"${{Me.Book[{bookNumber}].Duration}}");
@@ -702,6 +781,7 @@ namespace E3Core.Data
                     CastID = SpellID;
                     SpellIcon = MQ.Query<Int32>($"${{Me.Book[{bookNumber}].SpellIcon}}");
 					Level = MQ.Query<Int32>($"${{Me.Book[{bookNumber}].Level}}");
+
 				}
                 else
                 {
@@ -759,7 +839,14 @@ namespace E3Core.Data
             }
             else if (CastType == CastingType.Disc)
             {
-                TargetType = MQ.Query<String>($"${{Spell[{CastName}].TargetType}}");
+				//we already have this data populated, just kick out
+				if (DiscDataLookup.ContainsKey(CastName))
+				{
+					var SpellData = DiscDataLookup[CastName];
+					Spell.TransferSpellData(SpellData, this);
+					goto gotoCheckCollectionPopulation;
+				}
+				TargetType = MQ.Query<String>($"${{Spell[{CastName}].TargetType}}");
                 Duration = MQ.Query<Int32>($"${{Spell[{CastName}].Duration}}");
                 DurationTotalSeconds = MQ.Query<Int32>($"${{Spell[{CastName}].Duration.TotalSeconds}}");
                 EnduranceCost = MQ.Query<Int32>($"${{Spell[{CastName}].EnduranceCost}}");
@@ -787,7 +874,7 @@ namespace E3Core.Data
             {
                 //nothing to update here
             }
-
+			gotoCheckCollectionPopulation:
             foreach(string key in CheckForCollection.Keys.ToList())
             {
                 Int32 tcID = 0;
@@ -839,6 +926,7 @@ namespace E3Core.Data
                 }
             }
         }
+		public Int32 AAID = 0;
         public decimal MyCastTimeInSeconds = 0;
         public Double MyRange;
         public Int32 Mana;
@@ -857,7 +945,7 @@ namespace E3Core.Data
         public Boolean Rotate;
         public Int32 EnduranceCost;
         public Int32 Delay;
-        public Int32 DelayAfterCast = 0;
+        public Int32 AfterCastCompletedDelay = 0;
         public Int32 CastID;
         public Int32 MinEnd;
         public Boolean CastInvis;
@@ -884,9 +972,18 @@ namespace E3Core.Data
         public String AfterSpell = String.Empty;
         public Data.Spell AfterSpellData;
         public Boolean NoInterrupt;
-        public String AfterEvent = String.Empty;
-        public String BeforeEvent = String.Empty;
-        public String CastIF = String.Empty;
+		public Int32 SongRefreshTime = 18;
+
+		public Int32 AfterEventDelay = 0;
+		public Int32 BeforeEventDelay = 0;
+		public Int32 AfterSpellDelay = 0;
+		public Int32 BeforeSpellDelay = 0;
+		public Int32 AfterCastDelay = 0;
+
+		public String AfterEvent = String.Empty;
+		public String BeforeEvent = String.Empty;
+		
+		public String CastIF = String.Empty;
         public string Ifs = String.Empty;
         public string IfsKeys = String.Empty;
         public string AfterEventKeys = String.Empty;
@@ -909,12 +1006,22 @@ namespace E3Core.Data
         public Int32 ResistAdj = 0;
         public string ResistType = String.Empty;
 		public bool Enabled = true;
+		public List<String> SpellEffects = new List<string>();
 
 		//.\protoc --csharp_out=.\ SpellData.proto
 		//add field to this class, you need to update the proto file as well.
-		public static Spell FromProto(SpellData source)
+		public static Spell FromProto(SpellData source, Spell dest = null)
         {
-			Spell r = new Spell();
+			Spell r;
+			if(dest==null)
+			{
+				r = new Spell();
+			}
+			else
+			{
+				r = dest;
+			}
+			r.SongRefreshTime = source.SongRefreshTime;
 			r.AfterEvent = source.AfterEvent;
             r.AfterEventKeys = source.AfterEventKeys;
 			r.AfterSpell = source.AfterSpell;
@@ -931,7 +1038,7 @@ namespace E3Core.Data
 			r.Category = source.Category;
 			r.Debug = source.Debug;
 			r.Delay = source.Delay;
-			r.DelayAfterCast = source.DelayAfterCast;
+			r.AfterCastCompletedDelay = source.AfterCastCompletedDelay;
 			r.Duration = source.Duration;
 			r.DurationTotalSeconds = source.DurationTotalSeconds;
 			r.EnduranceCost = source.EnduranceCost;
@@ -1000,14 +1107,72 @@ namespace E3Core.Data
 				}
 			}
 			r.Enabled = source.Enabled;
-			
+
+			foreach(var entry in source.SpellEffects)
+			{
+				r.SpellEffects.Add(entry);
+			}
+			r.AfterEventDelay = source.AfterEventDelay;
+			r.BeforeEventDelay = source.BeforeEventDelay;
+			r.BeforeSpellDelay = source.BeforeSpellDelay;
+			r.AfterCastDelay = source.AfterCastDelay;
+			r.AfterSpellDelay = source.AfterSpellDelay;
+
 			return r;
 		}
-        public SpellData ToProto()
+		public static void TransferSpellData(SpellData source, Spell dest)
+		{
+			Spell r;
+			if (dest == null)
+			{
+				r = new Spell();
+			}
+			else
+			{
+				r = dest;
+			}
+			r.SongRefreshTime = source.SongRefreshTime;
+			r.CastID = source.CastID;
+			r.CastName = source.CastName;
+			r.CastType = (CastingType)source.CastType;
+			r.Category = source.Category;
+			
+			r.Duration = source.Duration;
+			r.DurationTotalSeconds = source.DurationTotalSeconds;
+			r.EnduranceCost = source.EnduranceCost;
+			r.InitName = source.InitName;
+			r.ItemMustEquip = source.ItemMustEquip;
+			r.Mana = source.Mana;
+			r.MyCastTime = (Decimal)source.MyCastTime;
+			r.MyCastTimeInSeconds = (Decimal)source.MyCastTimeInSeconds;
+			r.MyRange = source.MyRange;
+			r.NoAggro = source.NoAggro;
+			r.RecastTime = source.RecastTime;
+			r.RecoveryTime = (Decimal)source.RecoveryTime;
+			r.SpellIcon = source.SpellIcon;
+			r.SpellID = source.SpellID;
+			r.SpellInBook = source.SpellInBook;
+			r.SpellName = source.SpellName;
+			r.SpellType = source.SpellType;
+			r.Subcategory = source.Subcategory;
+			r.TargetType = source.TargetType;
+			r.Level = source.Level;
+			r.Description = source.Description;
+			r.ResistType = source.ResistType;
+			r.ResistAdj = source.ResistAdj;
+			r.CastTypeOverride = (CastingType)source.CastTypeOverride;
+			
+			foreach (var entry in source.SpellEffects)
+			{
+				r.SpellEffects.Add(entry);
+			}
+		}
+		public SpellData ToProto()
         {
 
             SpellData r = new SpellData();
-            r.AfterEvent = this.AfterEvent;
+			r.SongRefreshTime = this.SongRefreshTime;
+			r.AfterEvent = this.AfterEvent;
             r.AfterEventKeys = this.AfterEventKeys;
             r.AfterSpell = this.AfterSpell;
             r.AllowSpellSwap = this.AllowSpellSwap;
@@ -1023,7 +1188,7 @@ namespace E3Core.Data
             r.Category = this.Category;
             r.Debug = this.Debug;
             r.Delay = this.Delay;
-            r.DelayAfterCast = this.DelayAfterCast;
+            r.AfterCastCompletedDelay = this.AfterCastCompletedDelay;
             r.Duration = this.Duration;
             r.DurationTotalSeconds = this.DurationTotalSeconds;
             r.EnduranceCost = this.EnduranceCost;
@@ -1086,7 +1251,16 @@ namespace E3Core.Data
 			r.IfsKeys = IfsKeys;
 			r.CheckForCollection.AddRange(CheckForCollection.Keys.ToList());
 			r.Enabled = Enabled;
-            return r;
+			foreach (var entry in SpellEffects)
+			{
+				r.SpellEffects.Add(entry);
+			}
+			r.AfterEventDelay = AfterEventDelay;
+			r.BeforeEventDelay = BeforeEventDelay;
+			r.BeforeSpellDelay =BeforeSpellDelay;
+			r.AfterCastDelay = AfterCastDelay;
+			r.AfterSpellDelay = AfterSpellDelay;
+			return r;
 
         }
 		public void TransferFlags(Spell d)
@@ -1113,7 +1287,12 @@ namespace E3Core.Data
 			d.Reagent = Reagent;
 			d.Enabled = Enabled;
             d.CastTarget = CastTarget;
-		
+			d.AfterEventDelay = AfterEventDelay;
+			d.BeforeEventDelay = BeforeEventDelay;
+			d.BeforeSpellDelay = BeforeSpellDelay;
+			d.AfterCastDelay = AfterCastDelay;
+			d.AfterSpellDelay = AfterSpellDelay;
+			d.SongRefreshTime = SongRefreshTime;
 		}
 
         public string ToConfigEntry()
@@ -1148,9 +1327,15 @@ namespace E3Core.Data
 			string t_PctAggro = (PctAggro == 0) ? String.Empty : $"/PctAggro|{PctAggro}";
             string t_Delay = (Delay == 0) ? String.Empty : $"/Delay|{Delay}s";
 			string t_NoTarget = NoTarget == false ? String.Empty : $"/NoTarget";
-
+			string t_AfterEventDelay = AfterEventDelay == 0 ? String.Empty : $"/AfterEventDelay|{AfterEventDelay}";
+			string t_AfterSpellDelay = AfterSpellDelay == 0 ? String.Empty : $"/AfterEventDelay|{AfterSpellDelay}";
+			string t_BeforeEventDelay = BeforeEventDelay == 0 ? String.Empty : $"/BeforeEventDelay|{BeforeEventDelay}";
+			string t_BeforeSpellDelay = BeforeSpellDelay == 0 ? String.Empty : $"/BeforeEventDelay|{BeforeSpellDelay}";
+			string t_AfterCastDelay = AfterCastDelay == 0 ? String.Empty : $"/AfterEventDelay|{AfterCastDelay}";
+			string t_AfterCastCompletedDelay= AfterCastCompletedDelay == 0 ? String.Empty : $"/AfterCastCompletedDelay|{AfterCastCompletedDelay}";
+			string t_SongRefreshTime = SongRefreshTime == 18 ? String.Empty : $"/SongRefreshTime|{SongRefreshTime}";
 			//Main=Terror of Mirenilla Rk. II/Gem|4/Ifs|Tanking
-			string returnValue = $"{CastName}{t_CastTarget}{t_GemNumber}{t_Ifs}{t_checkFor}{t_CastIF}{t_healPct}{t_healthMax}{t_noInterrupt}{t_Zone}{t_MinSick}{t_BeforeSpell}{t_AfterSpell}{t_BeforeEvent}{t_AfterEvent}{t_minMana}{t_maxMana}{t_MinEnd}{t_ignoreStackRules}{t_MinDurationBeforeRecast}{t_MaxTries}{t_Reagent}{t_CastTypeOverride}{t_PctAggro}{t_Delay}{t_NoTarget}{t_Enabled}";
+			string returnValue = $"{CastName}{t_CastTarget}{t_GemNumber}{t_Ifs}{t_checkFor}{t_CastIF}{t_healPct}{t_healthMax}{t_noInterrupt}{t_Zone}{t_MinSick}{t_BeforeSpell}{t_AfterSpell}{t_BeforeEvent}{t_AfterEvent}{t_minMana}{t_maxMana}{t_MinEnd}{t_ignoreStackRules}{t_MinDurationBeforeRecast}{t_MaxTries}{t_Reagent}{t_CastTypeOverride}{t_PctAggro}{t_Delay}{t_NoTarget}{t_AfterEventDelay}{t_AfterSpellDelay}{t_BeforeEventDelay}{t_BeforeSpellDelay}{t_AfterCastDelay}{t_AfterCastCompletedDelay}{t_SongRefreshTime}{t_Enabled}";
 			return returnValue;
 
 		}

@@ -38,9 +38,10 @@ namespace E3Core.Processors
         private static Int64 _nextChaseCheckInterval = 10;
 		[ExposedData("Movement", "ChaseTarget")]
 		public static string _chaseTarget = String.Empty;
+		public static List<string> _clickitUseDoorZones = new List<string>() { "poknowledge", "potranq", "potimeb", "potimeb","anguish" };
 
         [SubSystemInit]
-        public static void Init()
+        public static void Movement_Init()
         {
             RegisterEvents();
              _doorData.LoadData();
@@ -255,17 +256,12 @@ namespace E3Core.Processors
                 {
                     Int32.TryParse(x.args[0], out Distance);
                 }
-
                 double currentX = MQ.Query<double>("${Me.X}");
                 double currentY = MQ.Query<double>("${Me.Y}");
              
                 E3.Bots.BroadcastCommandToGroup($"/e3movetorandomloc \"{currentX}\" \"{currentY}\" \"{Distance}\"",x,true);
-            
-
             });
             EventProcessor.RegisterCommand("/e3movetorandomloc", (x) => {
-
-
                 double currentX = 0;
                 double currentY = 0;
                 Int32 distance = 10;
@@ -280,14 +276,12 @@ namespace E3Core.Processors
                 {
                     return;
                 }
-
 				if (e3util.IsEQLive())
 				{
 					//random delay so it isn't quite so ovious
 					MQ.Delay(E3.Random.Next(1500, 3000));
 
 				}
-
 				double currentZ = MQ.Query<double>("${Me.Z}");
                 e3util.TryMoveToLoc(currentX+E3.Random.Next(-1*distance,distance), currentY + E3.Random.Next(-1 * distance, distance), currentZ);
 
@@ -316,8 +310,8 @@ namespace E3Core.Processors
             {
                 if (x.args.Count == 0)
                 {
-                    //we are telling people to follow us
-                    E3.Bots.BroadcastCommandToGroup($"/clickit {Zoning.CurrentZone.Id}",x);
+					//we are telling people to follow us
+					E3.Bots.BroadcastCommandToGroup($"/clickit {Zoning.CurrentZone.Id}",x);
 
                 }
                 if (e3util.FilterMe(x)) return;
@@ -338,7 +332,7 @@ namespace E3Core.Processors
                 Int32 closestID = _doorData.ClosestDoorID();
 
                 //eqlives doors have differnt IDs, do the basic click
-                if (closestID > 0 && !e3util.IsEQLive())
+                if (closestID > 0 && !e3util.IsEQLive() && (_clickitUseDoorZones.Contains(Zoning.CurrentZone.ShortName,StringComparer.OrdinalIgnoreCase)))
                 {
                     MQ.Cmd($"/doortarget id {closestID}");
                     double currentDistance = MQ.Query<Double>("${DoorTarget.Distance}");
@@ -390,9 +384,22 @@ namespace E3Core.Processors
                 else
                 {  //either eqlive or we don't have the id in our config
                     MQ.Cmd($"/doortarget");
-                    MQ.Cmd("/squelch /click left door");
-                }
-            });
+					double currentDistance = MQ.Query<Double>("${DoorTarget.Distance}");
+					if (currentDistance < 50)
+					{
+						Double doorX = MQ.Query<double>("${DoorTarget.X}");
+						Double doorY = MQ.Query<double>("${DoorTarget.Y}");
+						Double doorZ = MQ.Query<double>("${DoorTarget.Z}");
+						e3util.TryMoveToLoc(doorX, doorY, doorZ, 8, 3000);
+					}
+					else
+					{
+						MQ.Write("Door distance is > 50 units away, not moving");
+					}
+					MQ.Cmd("/squelch /click left door");
+
+				}
+			});
 
             EventProcessor.RegisterCommand("/anchoron", (x) =>
             {

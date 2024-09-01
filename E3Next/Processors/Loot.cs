@@ -29,7 +29,7 @@ namespace E3Core.Processors
 		public static Settings.FeatureSettings.LootStackable LootStackableSettings = null;
 
 		[SubSystemInit]
-        public static void Init()
+        public static void Loot_Init()
         {
             RegisterEvents();
             try
@@ -62,30 +62,30 @@ namespace E3Core.Processors
         private static void RegisterEvents()
         {
 
-			EventProcessor.RegisterCommand("/lootcommand", (x) =>
-			{
-				if (x.args.Count > 1 && !x.args[0].Equals(E3.CurrentName, StringComparison.OrdinalIgnoreCase))
-				{
-                    //send command to person
-					E3.Bots.BroadcastCommandToPerson(x.args[0], $"/lootcommand {x.args[0]} \"{x.args[1]}\"");
-				}
-				else
-				{
-                    //process command
+			//EventProcessor.RegisterCommand("/e3lootcommand", (x) =>
+			//{
+			//	if (x.args.Count > 1 && !x.args[0].Equals(E3.CurrentName, StringComparison.OrdinalIgnoreCase))
+			//	{
+   //                 //send command to person
+			//		E3.Bots.BroadcastCommandToPerson(x.args[0], $"/lootcommand {x.args[0]} \"{x.args[1]}\"");
+			//	}
+			//	else
+			//	{
+   //                 //process command
 	
-                    if(x.args.Count>1)
-                    {
-                        string corpseIdsString = x.args[1];
-                        E3.Bots.Broadcast("LootCommander Assigning to loot:" + corpseIdsString);
-                        List<Int32> corpseIds = new List<int>();
-                        e3util.StringsToNumbers(corpseIdsString, ',', corpseIds);
-                        foreach(var corpseId in corpseIds)
-                        {
-                            _lootCommanderAssisngedCorpsesToLoot.PushBack(corpseId);
-                        }
-                    }
-   			}
-			});
+   //                 if(x.args.Count>1)
+   //                 {
+   //                     string corpseIdsString = x.args[1];
+   //                     E3.Bots.Broadcast("LootCommander Assigning to loot:" + corpseIdsString);
+   //                     List<Int32> corpseIds = new List<int>();
+   //                     e3util.StringsToNumbers(corpseIdsString, ',', corpseIds);
+   //                     foreach(var corpseId in corpseIds)
+   //                     {
+   //                         _lootCommanderAssisngedCorpsesToLoot.PushBack(corpseId);
+   //                     }
+   //                 }
+   //			}
+			//});
 
 
             EventProcessor.RegisterCommand("/E3LootStackAdd", (x) =>
@@ -247,7 +247,7 @@ namespace E3Core.Processors
 				E3.Bots.BroadcastCommand($"/E3LootAdd \"{cursorItem}\" DESTROY");
 				LootDataFile.SaveData();
 
-				MQ.Cmd("/destroy");
+				e3util.CursorTryDestroyItem(cursorItem);
 			});
 
 			EventProcessor.RegisterCommand("/lootskip", (x) =>
@@ -569,11 +569,12 @@ namespace E3Core.Processors
                 Int32 cursorid = MQ.Query<Int32>("${Cursor.ID}");
                 if(cursorid>0)
                 {
-                    E3.Bots.Broadcast($"Deleting from corpse [] [{MQ.Query<string>("${Cursor}")}]");
-                    //have it on our cursor, lets destroy
-                    MQ.Cmd("/destroy");
-                    //delay until the cursor is empty
-                    MQ.Delay(1000, "${If[${Cursor.ID},FALSE,TRUE]}");
+					string cursorItemName = MQ.Query<string>("${Cursor}");
+					E3.Bots.Broadcast($"Deleting from corpse [] [{MQ.Query<string>("${Cursor}")}]");
+					//have it on our cursor, lets destroy
+					e3util.CursorTryDestroyItem(cursorItemName);
+					//delay until the cursor is empty
+					MQ.Delay(1000, "${If[${Cursor.ID},FALSE,TRUE]}");
                 }
 
             }
@@ -837,9 +838,10 @@ namespace E3Core.Processors
                     var cursorid = MQ.Query<int>("${Cursor.ID}");
                     if (cursorid == itemId)
 					{
-						E3.Bots.Broadcast($"Deleting from corpse [{MQ.Query<string>("${Cursor}")}]");
+						string cusrorItemName = MQ.Query<string>("${Cursor}");
+						E3.Bots.Broadcast($"Deleting from corpse [{cusrorItemName}]");
 						//have it on our cursor, lets destroy
-						MQ.Cmd("/destroy");
+						e3util.CursorTryDestroyItem(cusrorItemName);
 						//delay until the cursor is empty
 						MQ.Delay(1000, "${If[${Cursor.ID},FALSE,TRUE]}");
 

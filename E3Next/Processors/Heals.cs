@@ -23,8 +23,27 @@ namespace E3Core.Processors
 		private static bool _useEQGroupDataForHeals = true;
 		private static Data.Spell _orbOfShadowsSpell = null;
 		private static Data.Spell _orbOfSoulsSpell = null;
+		public static HashSet<string> IgnoreHealTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 
+		[SubSystemInit]
+		public static void Init_Heals()
+		{
+			List<string> pattern  =new List<string>() { $@"(.+) tells the raid, 'E3Pulling'", "(.+) tells the group, 'E3Pulling'" };
+			EventProcessor.RegisterEvent("PullingIgnoreHeals", pattern, (x) => {
+
+				if (x.match.Groups.Count > 1)
+				{
+					string user = x.match.Groups[1].Value;
+					if(!IgnoreHealTargets.Contains(user))
+					{
+						IgnoreHealTargets.Add(user);
+					}
+					E3.Bots.Broadcast($"\arIgnore Healing \ag for \ap{user}\ag till next assist or in combat.");
+					
+				}
+			});
+		}
 
 		[AdvSettingInvoke]
 		public static void Check_Heals()
@@ -40,7 +59,17 @@ namespace E3Core.Processors
 				}
 			}
 
-			if (!Basics.InCombat())
+
+			bool inCombat = Basics.InCombat();
+
+			//reset ignored targets once in combat
+			if (inCombat && IgnoreHealTargets.Count>0)
+			{
+				E3.Bots.Broadcast($"\arIgnore Healing \ag Clearing users from list.");
+				IgnoreHealTargets.Clear();
+			}
+
+			if (!inCombat)
 			{
 				if (!e3util.ShouldCheck(ref _nextHealCheck, _nextHealCheckInterval)) return;
 
@@ -83,9 +112,6 @@ namespace E3Core.Processors
 				e3util.PutOriginalTargetBackIfNeeded(targetID);
 			}
 		}
-
-
-
 		public static bool HealTanks(Int32 currentMana, Int32 pctMana)
 		{
 			if (E3.CharacterSettings.WhoToHeal.Contains("Tanks"))
@@ -129,27 +155,27 @@ namespace E3Core.Processors
 				Int32 targetID = MQ.Query<Int32>($"${{Me.XTarget[{x}].ID}}");
 				if (targetID > 0)
 				{
-
 					//check to see if they are in zone.
 					Spawn s;
 					if (_spawns.TryByID(targetID, out s))
 					{
-						if (s.TypeDesc != "Corpse")
+						if (!IgnoreHealTargets.Contains(s.CleanName))
 						{
-							if (s.Distance < 200)
+							if (s.TypeDesc != "Corpse")
 							{
-								Int32 pctHealth = MQ.Query<Int32>($"${{Me.XTarget[{x}].PctHPs}}");
-								if (pctHealth <= currentLowestHealth)
+								if (s.Distance < 200)
 								{
-									currentLowestHealth = pctHealth;
-									lowestHealthTargetid = targetID;
-									lowestHealthTargetDistance = s.Distance;
+									Int32 pctHealth = MQ.Query<Int32>($"${{Me.XTarget[{x}].PctHPs}}");
+									if (pctHealth <= currentLowestHealth)
+									{
+										currentLowestHealth = pctHealth;
+										lowestHealthTargetid = targetID;
+										lowestHealthTargetDistance = s.Distance;
+									}
 								}
 							}
-
 						}
 					}
-
 				}
 			}
 			//found someone to heal
@@ -359,6 +385,9 @@ namespace E3Core.Processors
 			foreach (var spell in E3.CharacterSettings.Heal_EmergencyHeals)
 			{
 				string target = spell.CastTarget;
+
+				if (IgnoreHealTargets.Contains(target)) continue;
+
 				Int32 pctHealth = 0;
 				if (E3.Bots.IsMyBot(target))
 				{
@@ -388,7 +417,7 @@ namespace E3Core.Processors
 					{
 						if (CastIfNeed)
 						{
-							E3.Bots.Broadcast($"Casting Emergency Heal. Target:{target} PctHealth:{pctHealth}");
+							E3.Bots.Broadcast($"Casting Emergency Heal. {spell.CastName} Target:{target} PctHealth:{pctHealth}");
 							Heal(currentMana, pctMana, new List<string> { target }, E3.CharacterSettings.Heal_EmergencyHeals, false, false, true);
 							return true;
 						}
@@ -410,7 +439,10 @@ namespace E3Core.Processors
 			{
 				Int32 pctHealth = 0;
 				string name = MQ.Query<string>($"${{Group.Member[{i}].Name}}");
-				if(E3.Bots.IsMyBot(name))
+
+				if (IgnoreHealTargets.Contains(name)) continue;
+
+				if (E3.Bots.IsMyBot(name))
 				{
 					//lets look up their health
 					pctHealth = E3.Bots.PctHealth(name);
@@ -440,7 +472,7 @@ namespace E3Core.Processors
 						{
 							if (CastIfNeeded)
 							{
-								E3.Bots.Broadcast($"Casting Emergency Heal Group. Target:{name} PctHealth:{pctHealth}");
+								E3.Bots.Broadcast($"Casting Emergency Heal Group. {spell.CastName} Target:{name} PctHealth:{pctHealth}");
 								Heal(currentMana, pctMana, new List<string> { name }, E3.CharacterSettings.Heal_EmergecyGroupHeals, false, false, true);
 							}
 							return true;
@@ -459,6 +491,8 @@ namespace E3Core.Processors
 
 				foreach (var name in targets)
 				{
+					if (IgnoreHealTargets.Contains(name)) continue;
+
 					Int32 targetID = 0;
 					Spawn s;
 					if (_spawns.TryByName(name, out s))
@@ -598,7 +632,7 @@ namespace E3Core.Processors
 								}
 							}
 							//if a pet and we are here, kick out.
-							if (healPets) return false;
+							if (healPets) continue;
 
 							//check netbots
 							bool isABot = E3.Bots.BotsConnected().Contains(name, StringComparer.OrdinalIgnoreCase);
@@ -680,10 +714,13 @@ namespace E3Core.Processors
 
 				foreach (var name in Basics.GroupMembers)
 				{
+					
 					Int32 targetID = 0;
 					Spawn s;
 					if (_spawns.TryByID(name, out s))
 					{
+						if (IgnoreHealTargets.Contains(s.CleanName)) continue;
+
 						targetID = healPets ? s.PetID : s.ID;
 
 						if (s.ID != targetID)
@@ -794,6 +831,8 @@ namespace E3Core.Processors
 			{
 				foreach (var name in targets)
 				{
+					if (IgnoreHealTargets.Contains(name)) continue;
+
 					Int32 targetID = 0;
 					Spawn s;
 					if (_spawns.TryByName(name, out s))

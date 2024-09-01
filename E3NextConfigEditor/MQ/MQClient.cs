@@ -169,6 +169,16 @@ namespace E3NextConfigEditor.MQ
 			throw new NotImplementedException();
 		}
 
+		public string SpellDataGetLine(string query, int line)
+		{
+			throw new NotImplementedException();
+		}
+
+		public int SpellDataGetLineCount(string query)
+		{
+			throw new NotImplementedException();
+		}
+
 		public void TraceEnd(string methodName)
 		{
 			throw new NotImplementedException();
@@ -180,6 +190,11 @@ namespace E3NextConfigEditor.MQ
 		}
 
 		public void Write(string query, [CallerMemberName] string memberName = "", [CallerFilePath] string fileName = "", [CallerLineNumber] int lineNumber = 0)
+		{
+			
+		}
+
+		public void WriteDelayed(string query, [CallerMemberName] string memberName = "", [CallerFilePath] string fileName = "", [CallerLineNumber] int lineNumber = 0)
 		{
 			
 		}

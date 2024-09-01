@@ -25,7 +25,7 @@ namespace E3Core.Processors
         private static Dictionary<string, bool> _burnsUseDictionary = new Dictionary<string, bool>();
 
         [SubSystemInit]
-        public static void Init()
+        public static void Burns_Init()
         {
             RegisterEpicAndAnguishBP();
             RegisterSwarmpets();

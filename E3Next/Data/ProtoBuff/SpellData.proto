@@ -47,7 +47,7 @@ message SpellData {
    
     int32 EnduranceCost=29;
     int32 Delay=30;
-    int32 DelayAfterCast=31;
+    int32 AfterCastCompletedDelay=31;
     int32 CastID=32;
     int32 MinEnd=33;
     bool CastInvis=34;
@@ -98,4 +98,12 @@ message SpellData {
     int32 MinHPTotal=80;
     string AfterEventKeys=81;
     string BeforeEventKeys=82;
+	int32 AAID=83;
+	repeated string SpellEffects=84;
+	int32 AfterEventDelay = 85;
+	int32 BeforeEventDelay = 86;
+	int32 AfterSpellDelay = 87;
+	int32 BeforeSpellDelay = 88;
+	int32 AfterCastDelay = 89;
+	int32 SongRefreshTime=90;
 }

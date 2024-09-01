@@ -294,9 +294,11 @@ namespace E3Core.Settings
                     {
                         if (!String.IsNullOrWhiteSpace(data))
                         {
-                            valueToSet = Int32.Parse(data);
-
-                        }
+							if(!Int32.TryParse(data,out valueToSet))
+							{
+								MQ.Write($"\arERROR! Invalid Int32 value for [{sectionKey}][{Key}]");
+							}
+	                    }
                     }
                 }
             }
@@ -523,7 +525,13 @@ namespace E3Core.Settings
         {
             if (!string.IsNullOrEmpty(_fileLastModifiedFileName))
             {
-                if (_fileLastModified != System.IO.File.GetLastWriteTime(_fileLastModifiedFileName))
+				var currentLastModified = System.IO.File.GetLastWriteTime(_fileLastModifiedFileName);
+
+				if(System.Diagnostics.Debugger.IsAttached)
+				{ return false;
+				}
+
+				if (_fileLastModified != currentLastModified)
                 {
                     return true;
                 }

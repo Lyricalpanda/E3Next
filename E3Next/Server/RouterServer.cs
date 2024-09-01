@@ -113,7 +113,8 @@ namespace E3Core.Server
 					SpellDataList spellDatas = new SpellDataList();
 					foreach (var spell in spells)
 					{
-						spellDatas.Data.Add(spell.ToProto());
+						var tspell = spell.ToProto();
+						spellDatas.Data.Add(tspell);
 					}
 					byte[] bytes = spellDatas.ToByteArray();
 					message.payloadLength = bytes.Length;
@@ -342,7 +343,7 @@ namespace E3Core.Server
 
 
             _rpcRouter.Dispose();
-            MQ.Write("Shutting down RouterServer Thread.");
+            MQ.WriteDelayed("Shutting down RouterServer Thread.");
 
         }
 

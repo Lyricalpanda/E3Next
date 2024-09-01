@@ -203,6 +203,7 @@ namespace E3Core.Utility
                 {
                     
                     e3util.NavToSpawnID(targetID);
+					return;
                     //exit from TryMoveToTarget if we've reached the target
                     if(MQ.Query<Double>("${Target.Distance}") < E3.GeneralSettings.Movement_NavStopDistance)
                     {
@@ -253,6 +254,12 @@ namespace E3Core.Utility
             }
 
         }
+		public static void SetXTargetSlotToAutoHater(Int32 slot)
+		{
+			MQ.Cmd($"/squelch /xtarg set {slot} ET");
+			MQ.Delay(100);
+			MQ.Cmd($"/squelch /xtarg set {slot} AH");
+		}
         public static bool TargetIsPCOrPCPet()
         {
             Spawn ct;
@@ -471,7 +478,37 @@ namespace E3Core.Utility
                 }
             }
 
-            return !inputSetValue;
+			if (inputs.Contains("Plate", StringComparer.OrdinalIgnoreCase))
+			{
+				if ((E3.CurrentClass & Class.Plate) == E3.CurrentClass)
+				{
+					returnValue = inputSetValue;
+				}
+			}
+			if (inputs.Contains("Chain", StringComparer.OrdinalIgnoreCase))
+			{
+				if ((E3.CurrentClass & Class.Chain) == E3.CurrentClass)
+				{
+					returnValue = inputSetValue;
+				}
+			}
+			if (inputs.Contains("Leather", StringComparer.OrdinalIgnoreCase))
+			{
+				if ((E3.CurrentClass & Class.Leather) == E3.CurrentClass)
+				{
+					returnValue = inputSetValue;
+				}
+			}
+			if (inputs.Contains("Silk", StringComparer.OrdinalIgnoreCase))
+			{
+				if ((E3.CurrentClass & Class.Silk) == E3.CurrentClass)
+				{
+					returnValue = inputSetValue;
+				}
+			}
+			
+
+			return !inputSetValue;
         }
         public static bool IsEQLive()
         {
@@ -675,6 +712,11 @@ namespace E3Core.Utility
             }
           
         }
+		public static void CursorTryDestroyItem(string item)
+		{
+			string itemWithoutComma = item.Replace(",", "");
+			MQ.Cmd($"/docommand ${{If[${{Bool[${{Cursor.Name.Equal[{item}]}}]}},/destroy,/e3bc Error! went to delete [{itemWithoutComma}] item on cursor but name does not match what is there]}}");
+		}
         public static bool ClearCursor()
         {
             Int32 cursorID = MQ.Query<Int32>("${Cursor.ID}");
@@ -684,12 +726,13 @@ namespace E3Core.Utility
                 if (cursorID > 0)
                 {
                     string autoinvItem = MQ.Query<string>("${Cursor}");
-
-                    if(E3.CharacterSettings.Cursor_Delete.Contains(autoinvItem, StringComparer.OrdinalIgnoreCase))
+                    
+                    if (E3.CharacterSettings.Cursor_Delete.Contains(autoinvItem, StringComparer.OrdinalIgnoreCase) || 
+                        E3.GlobalCursorDelete.Cursor_Delete.Contains(autoinvItem, StringComparer.OrdinalIgnoreCase))
                     {
-                        //configured to delete this item.
-                        MQ.Cmd("/destroy");
-                        if (autoinvItem != "NULL")
+						//configured to delete this item.
+						CursorTryDestroyItem(autoinvItem);
+						if (autoinvItem != "NULL")
                         {
                             E3.Bots.Broadcast($"\agAutoDestroy\aw:\ao{autoinvItem}");
                         }
@@ -732,8 +775,8 @@ namespace E3Core.Utility
                     bool isNoRent = MQ.Query<bool>("${Cursor.NoRent}");
                     if(isNoRent)
                     {
-                        MQ.Cmd("/destroy");
-                        MQ.Delay(300);                        
+						CursorTryDestroyItem(itemName);
+						MQ.Delay(300);                        
                     }
                     ClearCursor();
                 }
@@ -1105,7 +1148,7 @@ namespace E3Core.Utility
             MQ.Cmd($"/nav id {spawnID} distance={stopDistance}");
             
             Int64 endTime = Core.StopWatch.ElapsedMilliseconds + timeoutInMS;
-            MQ.Delay(300);
+            MQ.Delay(600);
 
             while (navPathExists && MQ.Query<int>("${Navigation.Velocity}") > 0)
             {
@@ -1325,38 +1368,52 @@ namespace E3Core.Utility
 		}
 		public static List<Data.Spell> ListAllActiveAA()
         {
-            List<Data.Spell> returnValue = new List<Data.Spell>();
-            for(Int32 i=0;i<10000;i++)
-            {
-                string spellName = MQ.Query<String>($"${{Me.AltAbility[{i}].Name}}");
-                if(spellName!="NULL")
-                {
-                    var spell = new Data.Spell(spellName);
-                    if(spell.CastType== CastingType.AA)
-                    {
-						returnValue.Add(spell);
+			//using (_log.Trace("AA List Call"))
+			{
+				List<Data.Spell> returnValue = new List<Data.Spell>();
+				for(Int32 i=0;i<10000;i++)
+				{
+					string spellName = MQ.Query<String>($"${{Me.AltAbility[{i}].Name}}");
+					if(spellName!="NULL")
+					{
+						var spell = new Data.Spell(spellName);
+
+						
+
+						if(spell.CastType== CastingType.AA)
+						{
+							for (Int32 x = 0; x < 12; x++)
+							{
+								string teffect = MQ.SpellDataGetLine(spell.SpellID.ToString(), x);
+								spell.SpellEffects.Add(teffect);
+							}
+							returnValue.Add(spell);
+						}
 					}
 				}
-            }
-            return returnValue;
-        }
+				return returnValue;
+			}
+		}
 		
 		public static List<Data.Spell> ListAllActiveSkills()
 		{
-			List<Data.Spell> returnValue = new List<Data.Spell>();
-			for (Int32 i = 0; i < Skills.IDToName.Count; i++)
-			{
-				bool haveSkill = MQ.Query<bool>($"${{Me.Ability[{i}]}}");
-				if (haveSkill)
+			
+				List<Data.Spell> returnValue = new List<Data.Spell>();
+				for (Int32 i = 0; i < Skills.IDToName.Count; i++)
 				{
-					var spell = new Data.Spell(Skills.IDToName[i]);
-					if (spell.CastType == CastingType.Ability)
+					bool haveSkill = MQ.Query<bool>($"${{Me.Ability[{i}]}}");
+					if (haveSkill)
 					{
-						returnValue.Add(spell);
+						var spell = new Data.Spell(Skills.IDToName[i]);
+						if (spell.CastType == CastingType.Ability)
+						{
+							returnValue.Add(spell);
+						}
 					}
 				}
-			}
-			return returnValue;
+				return returnValue;
+			
+			
 		}
 		public static List<Data.Spell> ListAllBookSpells()
         {
@@ -1369,6 +1426,12 @@ namespace E3Core.Utility
 					var spell = new Data.Spell(spellName);
 					if (spell.CastType == CastingType.Spell)
 					{
+
+						for (Int32 x = 0; x < 12; x++)
+						{
+							string teffect = MQ.SpellDataGetLine(spell.SpellID.ToString(), x);
+							spell.SpellEffects.Add(teffect);
+						}
 						returnValue.Add(spell);
 					}
 				}
@@ -1387,6 +1450,11 @@ namespace E3Core.Utility
 					var spell = new Data.Spell(spellName);
 					if (spell.CastType == CastingType.Disc)
 					{
+						for (Int32 x = 0; x < 12; x++)
+						{
+							string teffect = MQ.SpellDataGetLine(spell.SpellID.ToString(), x);
+							spell.SpellEffects.Add(teffect);
+						}
 						returnValue.Add(spell);
 					}
 				}
@@ -1408,6 +1476,12 @@ namespace E3Core.Utility
 				{
 					string itemName = MQ.Query<string>($"${{Me.Inventory[{i}]}}");
 					var newSpell = new Data.Spell(itemName, null);
+
+					for (Int32 x = 0; x < 12; x++)
+					{
+						string teffect = MQ.SpellDataGetLine(newSpell.SpellName, x);
+						newSpell.SpellEffects.Add(teffect);
+					}
 					returnValue.Add(newSpell);
 				}
 			}
@@ -1427,6 +1501,11 @@ namespace E3Core.Utility
 							{
 								String bagItem = MQ.Query<String>($"${{Me.Inventory[pack{i}].Item[{e}]}}");
 								var newSpell = new Data.Spell(bagItem, null);
+								for (Int32 x = 0; x < 12; x++)
+								{
+									string teffect = MQ.SpellDataGetLine(newSpell.SpellName, x);
+									newSpell.SpellEffects.Add(teffect);
+								}
 								returnValue.Add(newSpell);
 							}
 						}
@@ -1440,6 +1519,11 @@ namespace E3Core.Utility
 						{
 							string itemName = MQ.Query<string>($"${{Me.Inventory[pack{i}]}}");
 							var newSpell = new Data.Spell(itemName, null);
+							for (Int32 x = 0; x < 12; x++)
+							{
+								string teffect = MQ.SpellDataGetLine(newSpell.SpellName, x);
+								newSpell.SpellEffects.Add(teffect);
+							}
 							returnValue.Add(newSpell);
 						}
 					}

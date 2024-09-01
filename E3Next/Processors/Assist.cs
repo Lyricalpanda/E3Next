@@ -22,8 +22,10 @@ namespace E3Core.Processors
         public static Boolean IsAssisting = false;
 		[ExposedData("Assist", "AssistTargetID")]
 		public static Int32 AssistTargetID = 0;
-
-        public static long LastAssistEndedTimestamp = 0;
+		public static long LastAssistEndedTimestamp = 0;
+		public static long LastAssistStartedTimeStamp = 0;
+		[ExposedData("Assist", "CurrentSecondsInCombat")]
+		public static long CurrentSecondsInCombat = 0;
 
         private static Logging _log = E3.Log;
         private static IMQ MQ = E3.MQ;
@@ -49,7 +51,7 @@ namespace E3Core.Processors
         /// Initializes this instance.
         /// </summary>
         [SubSystemInit]
-        public static void Init()
+        public static void Assist_Init()
         {
             RegisterEvents();
 
@@ -60,6 +62,11 @@ namespace E3Core.Processors
         /// </summary>
         public static void Process()
         {
+			if(LastAssistStartedTimeStamp > 0)
+			{
+				CurrentSecondsInCombat = (Core.StopWatch.ElapsedMilliseconds - LastAssistStartedTimeStamp) / 1000;
+			}
+
             CheckAssistStatus();
             ProcessCombat();
         }
@@ -436,14 +443,21 @@ namespace E3Core.Processors
         /// </summary>
         public static void AssistOff()
         {  
-            if (MQ.Query<bool>("${Me.Combat}")) MQ.Cmd("/attack off");
+			while(MQ.Query<bool>("${Me.Combat}")) MQ.Cmd("/attack off");
+
+			
+
             if (MQ.Query<bool>("${Me.AutoFire}"))
             {
                 MQ.Cmd("/autofire");
                 MQ.Delay(1000);
             }
             if (MQ.Query<Int32>("${Me.Pet.ID}") > 0) MQ.Cmd("/squelch /pet back off");
-            IsAssisting = false;
+
+
+			CurrentSecondsInCombat = 0;
+			LastAssistStartedTimeStamp = 0;
+			IsAssisting = false;
             AllowControl = false;
             AssistTargetID = 0;
             _assistIsEnraged = false;
@@ -457,10 +471,12 @@ namespace E3Core.Processors
                 Burns.Reset();
             }
             LastAssistEndedTimestamp = Core.StopWatch.ElapsedMilliseconds;
-            //add 1 seconds before we follow check again, to handle /cleartarget assist spam
-            Movement._nextFollowCheck = Core.StopWatch.ElapsedMilliseconds + 1000;
 
-
+			if(Basics.InGameCombat())
+			{
+				//add 1 seconds before we follow check again, to handle /cleartarget assist spam
+				Movement._nextFollowCheck = Core.StopWatch.ElapsedMilliseconds + 1000;
+			}
 		}
 
         /// <summary>
@@ -473,6 +489,7 @@ namespace E3Core.Processors
             if (zoneId != Zoning.CurrentZone.Id) return;
 			
            
+			
 			//clear in case its not reset by other means
 			//or you want to attack in enrage
 			_assistIsEnraged = false;
@@ -493,9 +510,9 @@ namespace E3Core.Processors
                     E3.Bots.Broadcast("Cannot assist, a corpse");
                     return;
                 }
-                if (!(s.TypeDesc == "NPC" || s.TypeDesc == "Pet"))
+                if (!(s.TypeDesc == "NPC" || s.TypeDesc == "Pet" || s.TypeDesc == "Chest" || s.TypeDesc == "PC"))
                 {
-                    E3.Bots.Broadcast("Cannot assist, not a NPC or Pet");
+                    E3.Bots.Broadcast("Cannot assist, not a NPC,PC,Chest or Pet");
                     return;
                 }
 
@@ -543,8 +560,12 @@ namespace E3Core.Processors
 
                 Movement.PauseMovement();
 
+				if (!IsAssisting)
+				{
+					LastAssistStartedTimeStamp = Core.StopWatch.ElapsedMilliseconds;
+				}
 
-                IsAssisting = true;
+				IsAssisting = true;
                 AssistTargetID = mobID;
                 if (MQ.Query<Int32>("${Target.ID}") != AssistTargetID)
                 {
@@ -741,6 +762,13 @@ namespace E3Core.Processors
                 //clear in case its not reset by other means
                 //or you want to attack in enrage
                 _assistIsEnraged = false;
+
+			   //being told to asssist, clear out ignored targets from pullers.
+			   if(Heals.IgnoreHealTargets.Count>0)
+			   {
+				   E3.Bots.Broadcast($"\arIgnore Healing \ag Clearing users from list.");
+				   Heals.IgnoreHealTargets.Clear();
+			   }
 
                bool ignoreme = false;
                if(x.args.Contains("/ignoreme"))
@@ -940,6 +968,13 @@ namespace E3Core.Processors
                     Movement.AcquireFollow();
 
             });
+
+            EventProcessor.RegisterCommand("/e3smarttaunt", (x) =>
+            {
+				//swap them
+				e3util.ToggleBooleanSetting(ref E3.CharacterSettings.Assist_SmartTaunt, "SmartTaunt", x.args);
+            });
+
             e3util.RegisterCommandWithTarget("/e3offassistignore", (x) => { _offAssistIgnore.Add(x); });
             EventProcessor.RegisterEvent("EnrageOn", "(.+) has become ENRAGED.", (x) =>
             {
