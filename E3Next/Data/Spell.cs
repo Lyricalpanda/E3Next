@@ -33,7 +33,6 @@ namespace E3Core.Data
 		public static Dictionary<string, SpellData> AltDataLookup = new Dictionary<string, SpellData>(StringComparer.OrdinalIgnoreCase);
 		public static Dictionary<string, SpellData> DiscDataLookup = new Dictionary<string, SpellData>(StringComparer.OrdinalIgnoreCase);
 		public static Dictionary<string, SpellData> ItemDataLookup = new Dictionary<string, SpellData>(StringComparer.OrdinalIgnoreCase);
-
 		static Dictionary<string, Int32> _spellIDLookup = new Dictionary<string, Int32>();
 		public static IMQ MQ = E3.MQ;
         //mainly to deal with temp items that you might not have but specified in your ini
@@ -358,6 +357,17 @@ namespace E3Core.Data
                     else if (value.StartsWith("TriggerSpell|", StringComparison.OrdinalIgnoreCase))
                     {
                         TriggerSpell = GetArgument<String>(value);
+                    }
+                    else if (value.StartsWith("MultiTarget|", StringComparison.OrdinalIgnoreCase)) {
+                        IfsKeys = GetArgument<string>(value);
+                        var keys = IfsKeys.Split(','); // Splitting based on comma
+                        foreach (var key in keys)
+                        {
+                            MultiTargetList.Add(key);
+                        }
+                    }
+                    else if (value.Equals("RecastAll", StringComparison.OrdinalIgnoreCase)) {
+                        RecastOnAll = true;
                     }
                     else if (parsedData!=null && value.StartsWith("Ifs|", StringComparison.OrdinalIgnoreCase))
                     {
@@ -941,6 +951,7 @@ namespace E3Core.Data
         public Boolean NoBurn;
         public Boolean NoTarget;
         public Boolean NoAggro;
+        public Boolean RecastOnAll;
         public Int32 Mode;
         public Boolean Rotate;
         public Int32 EnduranceCost;
@@ -951,6 +962,7 @@ namespace E3Core.Data
         public Boolean CastInvis;
         public String SpellType = String.Empty;
         public String CastTarget = String.Empty;
+        public List<string> MultiTargetList = new List<string>();
         public List<string> StackRequestTargets = new List<string>();
         public Int64 StackIntervalCheck = 10000;
         public Int64 StackIntervalNextCheck = 0;
